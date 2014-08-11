@@ -1056,6 +1056,8 @@ void Mir2Lir::Materialize() {
       CodegenDump();
     }
   }
+
+  Cleanup();
 }
 
 CompiledMethod* Mir2Lir::GetCompiledMethod() {
