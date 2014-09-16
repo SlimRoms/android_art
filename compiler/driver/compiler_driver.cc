@@ -611,7 +611,7 @@ void CompilerDriver::PreCompile(jobject class_loader, const std::vector<const De
   VLOG(compiler) << "Resolve: " << GetMemoryUsageString(false);
 
   if (!compiler_options_->IsVerificationEnabled()) {
-    VLOG(compiler) << "Verify none mode specified, skipping verification.";
+    LOG(INFO) << "Verify none mode specified, skipping verification.";
     SetVerified(class_loader, dex_files, thread_pool, timings);
     return;
   }
