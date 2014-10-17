@@ -955,6 +955,10 @@ bool CompilerDriver::CanEmbedTypeInCode(const DexFile& dex_file, uint32_t type_i
   if (resolved_class == nullptr) {
     return false;
   }
+  if (GetCompilerOptions().GetCompilePic()) {
+    // Do not allow a direct class pointer to be used when compiling for position-independent
+    return false;
+  }
   *out_is_finalizable = resolved_class->IsFinalizable();
   const bool compiling_boot = Runtime::Current()->GetHeap()->IsCompilingBoot();
   const bool support_boot_image_fixup = GetSupportBootImageFixup();
