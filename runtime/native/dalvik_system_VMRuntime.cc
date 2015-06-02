@@ -126,6 +126,10 @@ static void VMRuntime_clearGrowthLimit(JNIEnv*, jobject) {
   Runtime::Current()->GetHeap()->ClearGrowthLimit();
 }
 
+static void VMRuntime_clampGrowthLimit(JNIEnv*, jobject) {
+  Runtime::Current()->GetHeap()->ClampGrowthLimit();
+}
+
 static jboolean VMRuntime_isDebuggerActive(JNIEnv*, jobject) {
   return Dbg::IsDebuggerActive();
 }
@@ -211,6 +215,13 @@ static void VMRuntime_trimHeap(JNIEnv*, jobject) {
 
 static void VMRuntime_concurrentGC(JNIEnv* env, jobject) {
   Runtime::Current()->GetHeap()->ConcurrentGC(ThreadForEnv(env));
+}
+
+static void VMRuntime_requestConcurrentGC(JNIEnv* env, jobject) {
+  Runtime::Current()->GetHeap()->NotifyConcurrentGCRequest(ThreadForEnv(env));
+}
+static void VMRuntime_waitForConcurrentGCRequest(JNIEnv* env, jobject) {
+  Runtime::Current()->GetHeap()->WaitForConcurrentGCRequest(ThreadForEnv(env));
 }
 
 typedef std::map<std::string, mirror::String*> StringTable;
@@ -547,9 +558,12 @@ static jstring VMRuntime_getCurrentInstructionSet(JNIEnv* env, jclass) {
 static JNINativeMethod gMethods[] = {
   NATIVE_METHOD(VMRuntime, addressOf, "!(Ljava/lang/Object;)J"),
   NATIVE_METHOD(VMRuntime, bootClassPath, "()Ljava/lang/String;"),
+  NATIVE_METHOD(VMRuntime, clampGrowthLimit, "()V"),
   NATIVE_METHOD(VMRuntime, classPath, "()Ljava/lang/String;"),
   NATIVE_METHOD(VMRuntime, clearGrowthLimit, "()V"),
   NATIVE_METHOD(VMRuntime, concurrentGC, "()V"),
+  NATIVE_METHOD(VMRuntime, requestConcurrentGC, "()V"),
+  NATIVE_METHOD(VMRuntime, waitForConcurrentGCRequest, "()V"),
   NATIVE_METHOD(VMRuntime, disableJitCompilation, "()V"),
   NATIVE_METHOD(VMRuntime, getTargetHeapUtilization, "()F"),
   NATIVE_METHOD(VMRuntime, isDebuggerActive, "!()Z"),
