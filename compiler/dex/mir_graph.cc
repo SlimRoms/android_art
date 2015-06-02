@@ -124,7 +124,8 @@ MIRGraph::MIRGraph(CompilationUnit* cu, ArenaAllocator* arena)
       ifield_lowering_infos_(arena, 0u),
       sfield_lowering_infos_(arena, 0u),
       method_lowering_infos_(arena, 0u),
-      gen_suspend_test_list_(arena, 0u) {
+      gen_suspend_test_list_(arena, 0u),
+      qcm(nullptr) {
   try_block_addr_ = new (arena_) ArenaBitVector(arena_, 0, true /* expandable */);
   max_available_special_compiler_temps_ = std::abs(static_cast<int>(kVRegNonSpecialTempBaseReg))
       - std::abs(static_cast<int>(kVRegTempBaseReg));
@@ -132,6 +133,11 @@ MIRGraph::MIRGraph(CompilationUnit* cu, ArenaAllocator* arena)
 
 MIRGraph::~MIRGraph() {
   STLDeleteElements(&m_units_);
+  CleanupGraphData();
+}
+
+void MIRGraph::CleanupGraphData()
+{
 }
 
 /*
@@ -869,6 +875,11 @@ uint64_t MIRGraph::GetDataFlowAttributes(MIR* mir) {
   return GetDataFlowAttributes(opcode);
 }
 
+
+const char * MIRGraph::GetExtendedMirOpName(int index){
+    return extended_mir_op_names_[index];
+}
+
 // TODO: use a configurable base prefix, and adjust callers to supply pass name.
 /* Dump the CFG into a DOT graph */
 void MIRGraph::DumpCFG(const char* dir_prefix, bool all_blocks, const char *suffix) {
@@ -916,7 +927,7 @@ void MIRGraph::DumpCFG(const char* dir_prefix, bool all_blocks, const char *suff
             if (opcode > kMirOpSelect && opcode < kMirOpLast) {
               if (opcode == kMirOpConstVector) {
                 fprintf(file, "    {%04x %s %d %d %d %d %d %d\\l}%s\\\n", mir->offset,
-                        extended_mir_op_names_[kMirOpConstVector - kMirOpFirst],
+                        MIRGraph::GetExtendedMirOpName(kMirOpConstVector - kMirOpFirst),
                         mir->dalvikInsn.vA,
                         mir->dalvikInsn.vB,
                         mir->dalvikInsn.arg[0],
@@ -926,7 +937,7 @@ void MIRGraph::DumpCFG(const char* dir_prefix, bool all_blocks, const char *suff
                         mir->next ? " | " : " ");
               } else {
                 fprintf(file, "    {%04x %s %d %d %d\\l}%s\\\n", mir->offset,
-                        extended_mir_op_names_[opcode - kMirOpFirst],
+                        MIRGraph::GetExtendedMirOpName(opcode - kMirOpFirst),
                         mir->dalvikInsn.vA,
                         mir->dalvikInsn.vB,
                         mir->dalvikInsn.vC,
@@ -937,7 +948,7 @@ void MIRGraph::DumpCFG(const char* dir_prefix, bool all_blocks, const char *suff
                       mir->ssa_rep ? GetDalvikDisassembly(mir) :
                       !MIR::DecodedInstruction::IsPseudoMirOp(opcode) ?
                         Instruction::Name(mir->dalvikInsn.opcode) :
-                        extended_mir_op_names_[opcode - kMirOpFirst],
+                        MIRGraph::GetExtendedMirOpName(opcode - kMirOpFirst),
                       (mir->optimization_flags & MIR_IGNORE_RANGE_CHECK) != 0 ? " no_rangecheck" : " ",
                       (mir->optimization_flags & MIR_IGNORE_NULL_CHECK) != 0 ? " no_nullcheck" : " ",
                       (mir->optimization_flags & MIR_IGNORE_SUSPEND_CHECK) != 0 ? " no_suspendcheck" : " ",
@@ -1226,7 +1237,7 @@ char* MIRGraph::GetDalvikDisassembly(const MIR* mir) {
 
   // Handle special cases.
   if ((opcode == kMirOpCheck) || (opcode == kMirOpCheckPart2)) {
-    str.append(extended_mir_op_names_[opcode - kMirOpFirst]);
+    str.append(MIRGraph::GetExtendedMirOpName(opcode - kMirOpFirst));
     str.append(": ");
     // Recover the original Dex instruction.
     insn = mir->meta.throw_insn->dalvikInsn;
@@ -1243,7 +1254,7 @@ char* MIRGraph::GetDalvikDisassembly(const MIR* mir) {
   }
 
   if (MIR::DecodedInstruction::IsPseudoMirOp(opcode)) {
-    str.append(extended_mir_op_names_[opcode - kMirOpFirst]);
+    str.append(MIRGraph::GetExtendedMirOpName(opcode - kMirOpFirst));
   } else {
     dalvik_format = Instruction::FormatOf(insn.opcode);
     flags = Instruction::FlagsOf(insn.opcode);
@@ -1506,6 +1517,9 @@ void MIRGraph::InitializeMethodUses() {
   int num_ssa_regs = GetNumSSARegs();
   use_counts_.Resize(num_ssa_regs + 32);
   raw_use_counts_.Resize(num_ssa_regs + 32);
+  // reset both lists to restart fresh
+  use_counts_.Reset();
+  raw_use_counts_.Reset();
   // Initialize list.
   for (int i = 0; i < num_ssa_regs; i++) {
     use_counts_.Insert(0);

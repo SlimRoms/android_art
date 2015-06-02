@@ -1469,7 +1469,8 @@ static int dex2oat(int argc, char** argv) {
     if (kSaveDexInput) {
       for (size_t i = 0; i < dex_files.size(); ++i) {
         const DexFile* dex_file = dex_files[i];
-        std::string tmp_file_name(StringPrintf("/data/local/tmp/dex2oat.%d.%zd.dex", getpid(), i));
+        std::string tmp_file_name(StringPrintf("/data/local/tmp/dex2oat.%d.%zd.dex",
+                                               getpid(), i));
         std::unique_ptr<File> tmp_file(OS::CreateEmptyFile(tmp_file_name.c_str()));
         if (tmp_file.get() == nullptr) {
             PLOG(ERROR) << "Failed to open file " << tmp_file_name

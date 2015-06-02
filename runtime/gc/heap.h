@@ -291,6 +291,10 @@ class Heap {
   // implement dalvik.system.VMRuntime.clearGrowthLimit.
   void ClearGrowthLimit();
 
+  // Make the current growth limit the new maximum capacity, unmaps pages at the end of spaces
+  // which will never be used. Used to implement dalvik.system.VMRuntime.clampGrowthLimit.
+  void ClampGrowthLimit();
+
   // Target ideal heap utilization ratio, implements
   // dalvik.system.VMRuntime.getTargetHeapUtilization.
   double GetTargetHeapUtilization() const {
@@ -599,6 +603,9 @@ class Heap {
     return &reference_processor_;
   }
 
+  void WaitForConcurrentGCRequest(Thread* self) LOCKS_EXCLUDED(gc_request_lock_);
+  void NotifyConcurrentGCRequest(Thread* self) LOCKS_EXCLUDED(gc_request_lock_);
+
  private:
   // Compact source space to target space.
   void Compact(space::ContinuousMemMapAllocSpace* target_space,
@@ -862,6 +869,11 @@ class Heap {
   Mutex* gc_complete_lock_ DEFAULT_MUTEX_ACQUIRED_AFTER;
   std::unique_ptr<ConditionVariable> gc_complete_cond_ GUARDED_BY(gc_complete_lock_);
 
+  // Guards concurrent GC requests.
+  Mutex* gc_request_lock_ DEFAULT_MUTEX_ACQUIRED_AFTER;
+  std::unique_ptr<ConditionVariable> gc_request_cond_ GUARDED_BY(gc_request_lock_);
+  bool gc_request_pending_ GUARDED_BY(gc_request_lock_);
+
   // Reference processor;
   ReferenceProcessor reference_processor_;
 
@@ -873,7 +885,7 @@ class Heap {
   collector::GcType next_gc_type_;
 
   // Maximum size that the heap can reach.
-  const size_t capacity_;
+  size_t capacity_;
 
   // The size the heap is limited to. This is initially smaller than capacity, but for largeHeap
   // programs it is "cleared" making it the same as capacity.

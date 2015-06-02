@@ -1089,11 +1089,11 @@ void DumpNativeStack(std::ostream& os, pid_t tid, const char* prefix,
     // after the <RELATIVE_ADDR>. There can be any prefix data before the
     // #XX. <RELATIVE_ADDR> has to be a hex number but with no 0x prefix.
     os << prefix << StringPrintf("#%02zu pc ", it->num);
-    if (!it->map) {
+    if (!BacktraceMap::IsValid(it->map)) {
       os << StringPrintf("%08" PRIxPTR "  ???", it->pc);
     } else {
-      os << StringPrintf("%08" PRIxPTR "  ", it->pc - it->map->start)
-         << it->map->name << " (";
+      os << StringPrintf("%08" PRIxPTR "  ", it->pc - it->map.start)
+         << it->map.name << " (";
       if (!it->func_name.empty()) {
         os << it->func_name;
         if (it->func_offset != 0) {
